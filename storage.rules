@@ -1,0 +1,36 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Global default-deny safety net
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    function isValidStorageId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 160 && id.matches('^[a-zA-Z0-9_.\\-]+$');
+    }
+
+    function isVerifiedAdmin() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email == 'luckymain143@gmail.com';
+    }
+
+    // Private partner KYC/property document vault:
+    // - Zero public reads or unauthenticated downloads
+    // - Write-once on upload, strictly bounded to 5 MB and PDF/JPG/PNG/WEBP MIME types
+    match /applications/{applicationId}/documents/{docFile} {
+      allow read: if isVerifiedAdmin();
+      allow create: if isValidStorageId(applicationId)
+        && isValidStorageId(docFile)
+        && resource == null
+        && request.resource != null
+        && request.resource.size > 0
+        && request.resource.size <= 5 * 1024 * 1024
+        && request.resource.contentType.matches('^(application/pdf|image/jpeg|image/png|image/webp)$');
+      allow update: if false;
+      allow delete: if isVerifiedAdmin();
+    }
+  }
+}

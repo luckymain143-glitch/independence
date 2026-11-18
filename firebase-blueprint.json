@@ -1,0 +1,326 @@
+{
+  "entities": {
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Authorized corporate administrator account with role-based access control.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "minLength": 3, "maxLength": 160 },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "role": { "type": "string", "enum": ["super_admin", "operations_admin", "territory_manager", "reviewer"] },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "displayName", "role", "active", "createdAt", "updatedAt"]
+    },
+    "WebsiteSettings": {
+      "title": "WebsiteSettings",
+      "description": "Configurable corporate website content, hero messaging, contact info, and FAQs.",
+      "type": "object",
+      "properties": {
+        "companyName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "tagline": { "type": "string", "minLength": 2, "maxLength": 200 },
+        "heroHeading": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "heroSubheading": { "type": "string", "minLength": 2, "maxLength": 400 },
+        "heroBannerUrl": { "type": "string", "maxLength": 500 },
+        "aboutIntro": { "type": "string", "maxLength": 2500 },
+        "vision": { "type": "string", "maxLength": 1500 },
+        "mission": { "type": "string", "maxLength": 1500 },
+        "objectives": { "type": "string", "maxLength": 2000 },
+        "qualityCommitment": { "type": "string", "maxLength": 1500 },
+        "distributionStrategy": { "type": "string", "maxLength": 1500 },
+        "contactEmail": { "type": "string", "maxLength": 160 },
+        "contactPhone": { "type": "string", "maxLength": 40 },
+        "whatsappNumber": { "type": "string", "maxLength": 40 },
+        "officeAddress": { "type": "string", "maxLength": 500 },
+        "faqs": { "type": "array" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["companyName", "tagline", "heroHeading", "heroSubheading", "updatedAt"]
+    },
+    "ProductCategory": {
+      "title": "ProductCategory",
+      "description": "FMCG product portfolio category.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "slug": { "type": "string", "minLength": 2, "maxLength": 100, "pattern": "^[a-z0-9_\\-]+$" },
+        "description": { "type": "string", "maxLength": 600 },
+        "imageUrl": { "type": "string", "maxLength": 500 },
+        "sortOrder": { "type": "number" },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "slug", "sortOrder", "active", "createdAt", "updatedAt"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "FMCG product item displayed in the dynamic product catalogue.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "categoryId": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "categoryName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "description": { "type": "string", "minLength": 5, "maxLength": 1200 },
+        "productInfo": { "type": "string", "maxLength": 800 },
+        "packSizes": { "type": "string", "maxLength": 200 },
+        "imageUrl": { "type": "string", "maxLength": 500 },
+        "status": { "type": "string", "enum": ["published", "draft", "archived"] },
+        "featured": { "type": "boolean" },
+        "isSample": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "categoryId", "categoryName", "description", "status", "featured", "createdAt", "updatedAt"]
+    },
+    "InvestmentSetting": {
+      "title": "InvestmentSetting",
+      "description": "Editable investment terms and eligibility details per business opportunity tier.",
+      "type": "object",
+      "properties": {
+        "opportunityType": { "type": "string", "enum": ["dealership", "cf_agency", "super_stockist", "distributorship"] },
+        "title": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "summary": { "type": "string", "maxLength": 1200 },
+        "initialInvestment": { "type": "string", "maxLength": 200 },
+        "securityDeposit": { "type": "string", "maxLength": 200 },
+        "initialStock": { "type": "string", "maxLength": 200 },
+        "infrastructure": { "type": "string", "maxLength": 250 },
+        "warehouse": { "type": "string", "maxLength": 250 },
+        "transportation": { "type": "string", "maxLength": 250 },
+        "otherCharges": { "type": "string", "maxLength": 250 },
+        "termsLabel": { "type": "string", "enum": ["Estimated Indicative Range", "Approved Commercial Terms", "Subject to Territory Assessment"] },
+        "disclaimer": { "type": "string", "maxLength": 800 },
+        "eligibilityPoints": { "type": "array" },
+        "requiredDocuments": { "type": "array" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["opportunityType", "title", "summary", "termsLabel", "disclaimer", "updatedAt"]
+    },
+    "Territory": {
+      "title": "Territory",
+      "description": "Pan-India territory configuration (State, District, City, PIN Code, and open/closed status).",
+      "type": "object",
+      "properties": {
+        "state": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "stateType": { "type": "string", "enum": ["State", "Union Territory"] },
+        "district": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "city": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "pinCode": { "type": "string", "minLength": 6, "maxLength": 6, "pattern": "^[0-9]{6}$" },
+        "status": { "type": "string", "enum": ["open", "closed", "allocated"] },
+        "availableCategories": { "type": "array" },
+        "allocatedPartner": { "type": "string", "maxLength": 140 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["state", "stateType", "district", "city", "pinCode", "status", "availableCategories", "updatedAt"]
+    },
+    "Application": {
+      "title": "Application",
+      "description": "Private partner onboarding application with full applicant and business information (Admin-only read).",
+      "type": "object",
+      "properties": {
+        "applicationRefId": { "type": "string", "minLength": 6, "maxLength": 40, "pattern": "^[A-Z0-9\\-]+$" },
+        "category": { "type": "string", "enum": ["dealership", "cf_agency", "super_stockist", "distributorship"] },
+        "applicantName": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "mobile": { "type": "string", "minLength": 10, "maxLength": 15, "pattern": "^[0-9]{10,15}$" },
+        "email": { "type": "string", "minLength": 5, "maxLength": 160 },
+        "state": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "district": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "city": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "pinCode": { "type": "string", "minLength": 6, "maxLength": 6, "pattern": "^[0-9]{6}$" },
+        "preferredTerritory": { "type": "string", "minLength": 2, "maxLength": 200 },
+        "businessDetails": { "type": "object" },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Application Submitted",
+            "Initial Screening",
+            "Under Verification",
+            "Documents Pending",
+            "Business Evaluation",
+            "Territory Availability Check",
+            "Management Review",
+            "Approved",
+            "Rejected"
+          ]
+        },
+        "internalRemarks": { "type": "string", "maxLength": 2000 },
+        "publicRemarks": { "type": "string", "maxLength": 1000 },
+        "pendingDocuments": { "type": "array" },
+        "documentCount": { "type": "number" },
+        "trackingKey": { "type": "string", "minLength": 10, "maxLength": 80, "pattern": "^[A-Z0-9_\\-]+$" },
+        "submittedAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "applicationRefId",
+        "category",
+        "applicantName",
+        "mobile",
+        "email",
+        "state",
+        "district",
+        "city",
+        "pinCode",
+        "preferredTerritory",
+        "businessDetails",
+        "status",
+        "documentCount",
+        "trackingKey",
+        "submittedAt",
+        "updatedAt"
+      ]
+    },
+    "ApplicationDocument": {
+      "title": "ApplicationDocument",
+      "description": "Private uploaded verification document for an application (Admin-only read, zero public download URLs).",
+      "type": "object",
+      "properties": {
+        "applicationId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "docType": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "fileName": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "mimeType": { "type": "string", "enum": ["application/pdf", "image/jpeg", "image/png", "image/webp"] },
+        "fileSize": { "type": "number" },
+        "storageProvider": { "type": "string", "enum": ["firebase_storage", "firestore_private_vault"] },
+        "storagePath": { "type": "string", "maxLength": 300 },
+        "dataUrl": { "type": "string", "maxLength": 800000 },
+        "verified": { "type": "boolean" },
+        "uploadedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["applicationId", "docType", "fileName", "mimeType", "fileSize", "storageProvider", "verified", "uploadedAt"]
+    },
+    "ApplicationStatusHistory": {
+      "title": "ApplicationStatusHistory",
+      "description": "Immutable workflow transition entry for an application.",
+      "type": "object",
+      "properties": {
+        "applicationId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "status": { "type": "string", "maxLength": 80 },
+        "remark": { "type": "string", "maxLength": 1000 },
+        "changedBy": { "type": "string", "maxLength": 160 },
+        "changedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["applicationId", "status", "remark", "changedBy", "changedAt"]
+    },
+    "TrackingRecord": {
+      "title": "TrackingRecord",
+      "description": "PII-scrubbed public tracking projection keyed by ReferenceID__Mobile for direct lookup only (no list queries).",
+      "type": "object",
+      "properties": {
+        "applicationId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "applicationRefId": { "type": "string", "minLength": 6, "maxLength": 40, "pattern": "^[A-Z0-9\\-]+$" },
+        "category": { "type": "string", "enum": ["dealership", "cf_agency", "super_stockist", "distributorship"] },
+        "state": { "type": "string", "maxLength": 100 },
+        "district": { "type": "string", "maxLength": 100 },
+        "status": { "type": "string", "maxLength": 80 },
+        "publicRemarks": { "type": "string", "maxLength": 1000 },
+        "pendingDocuments": { "type": "array" },
+        "timeline": { "type": "array" },
+        "submittedAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["applicationId", "applicationRefId", "category", "state", "district", "status", "timeline", "submittedAt", "updatedAt"]
+    },
+    "Enquiry": {
+      "title": "Enquiry",
+      "description": "Business, franchise, or support enquiry submitted from Contact Us (Admin-only read).",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "mobile": { "type": "string", "minLength": 10, "maxLength": 15, "pattern": "^[0-9]{10,15}$" },
+        "email": { "type": "string", "maxLength": 160 },
+        "enquiryType": { "type": "string", "enum": ["Business Enquiry", "Franchise Enquiry", "Dealership Support", "C&F Support", "Distributor Support", "General Support"] },
+        "state": { "type": "string", "maxLength": 100 },
+        "message": { "type": "string", "minLength": 5, "maxLength": 2000 },
+        "status": { "type": "string", "enum": ["new", "in_progress", "resolved"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "mobile", "email", "enquiryType", "message", "status", "createdAt"]
+    },
+    "NotificationLog": {
+      "title": "NotificationLog",
+      "description": "Audit trail of email/SMS/WhatsApp notification dispatch status.",
+      "type": "object",
+      "properties": {
+        "channel": { "type": "string", "enum": ["email", "sms", "whatsapp"] },
+        "recipientMasked": { "type": "string", "maxLength": 120 },
+        "eventType": { "type": "string", "maxLength": 100 },
+        "applicationRefId": { "type": "string", "maxLength": 40 },
+        "status": { "type": "string", "enum": ["sent", "not_configured", "failed"] },
+        "detail": { "type": "string", "maxLength": 400 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["channel", "recipientMasked", "eventType", "status", "createdAt"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Immutable admin action audit log.",
+      "type": "object",
+      "properties": {
+        "actorEmail": { "type": "string", "maxLength": 160 },
+        "action": { "type": "string", "maxLength": 120 },
+        "targetType": { "type": "string", "maxLength": 80 },
+        "targetId": { "type": "string", "maxLength": 128 },
+        "summary": { "type": "string", "maxLength": 600 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["actorEmail", "action", "targetType", "targetId", "summary", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/admins/{adminUid}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Authorized admin roles and permissions."
+    },
+    "/website_settings/{settingId}": {
+      "schema": { "$ref": "#/entities/WebsiteSettings" },
+      "description": "Public corporate content, FAQs, and contact configuration."
+    },
+    "/product_categories/{categoryId}": {
+      "schema": { "$ref": "#/entities/ProductCategory" },
+      "description": "FMCG product categories."
+    },
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Dynamic FMCG product catalogue."
+    },
+    "/investment_settings/{opportunityType}": {
+      "schema": { "$ref": "#/entities/InvestmentSetting" },
+      "description": "Configurable investment and commercial terms per opportunity."
+    },
+    "/territories/{territoryId}": {
+      "schema": { "$ref": "#/entities/Territory" },
+      "description": "Pan-India territory availability and PIN code mappings."
+    },
+    "/applications/{applicationId}": {
+      "schema": { "$ref": "#/entities/Application" },
+      "description": "Partner applications containing PII (Admin-only read/update)."
+    },
+    "/applications/{applicationId}/documents/{docId}": {
+      "schema": { "$ref": "#/entities/ApplicationDocument" },
+      "description": "Private uploaded verification documents (Admin-only read)."
+    },
+    "/applications/{applicationId}/history/{historyId}": {
+      "schema": { "$ref": "#/entities/ApplicationStatusHistory" },
+      "description": "Application workflow status history."
+    },
+    "/tracking_records/{trackingKey}": {
+      "schema": { "$ref": "#/entities/TrackingRecord" },
+      "description": "Direct-lookup-only scrubbed tracking projection keyed by ReferenceID__Mobile."
+    },
+    "/enquiries/{enquiryId}": {
+      "schema": { "$ref": "#/entities/Enquiry" },
+      "description": "Public contact and franchise enquiries (Admin-only read)."
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/NotificationLog" },
+      "description": "Notification dispatch logs (Admin-only read)."
+    },
+    "/audit_logs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "Admin audit trail (Admin-only read)."
+    }
+  }
+}

@@ -1,0 +1,446 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Hardened Global Helpers
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidTrackingKey(key) {
+      return key is string && key.size() >= 12 && key.size() <= 80 && key.matches('^[A-Z0-9\\-]+__[0-9]{10,15}$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isBootstrappedAdmin() {
+      return isVerifiedUser() && request.auth.token.email == 'luckymain143@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() || (
+        isVerifiedUser() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true
+      );
+    }
+
+    // 3. Validation Blueprints
+    function isValidAdminUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'role', 'active', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'email', 'displayName', 'role', 'active', 'createdAt', 'updatedAt'])
+        && isValidId(data.uid)
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 160
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120
+        && data.role in ['super_admin', 'operations_admin', 'territory_manager', 'reviewer']
+        && data.active is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidWebsiteSettings(data) {
+      return data.keys().hasAll(['companyName', 'tagline', 'heroHeading', 'heroSubheading', 'updatedAt'])
+        && data.keys().hasOnly([
+          'companyName', 'tagline', 'heroHeading', 'heroSubheading', 'heroBannerUrl',
+          'aboutIntro', 'vision', 'mission', 'objectives', 'qualityCommitment',
+          'distributionStrategy', 'contactEmail', 'contactPhone', 'whatsappNumber',
+          'officeAddress', 'faqs', 'updatedAt'
+        ])
+        && data.companyName is string && data.companyName.size() >= 2 && data.companyName.size() <= 120
+        && data.tagline is string && data.tagline.size() >= 2 && data.tagline.size() <= 200
+        && data.heroHeading is string && data.heroHeading.size() >= 2 && data.heroHeading.size() <= 160
+        && data.heroSubheading is string && data.heroSubheading.size() >= 2 && data.heroSubheading.size() <= 400
+        && (!('heroBannerUrl' in data) || (data.heroBannerUrl is string && data.heroBannerUrl.size() <= 500))
+        && (!('aboutIntro' in data) || (data.aboutIntro is string && data.aboutIntro.size() <= 2500))
+        && (!('vision' in data) || (data.vision is string && data.vision.size() <= 1500))
+        && (!('mission' in data) || (data.mission is string && data.mission.size() <= 1500))
+        && (!('objectives' in data) || (data.objectives is string && data.objectives.size() <= 2000))
+        && (!('qualityCommitment' in data) || (data.qualityCommitment is string && data.qualityCommitment.size() <= 1500))
+        && (!('distributionStrategy' in data) || (data.distributionStrategy is string && data.distributionStrategy.size() <= 1500))
+        && (!('contactEmail' in data) || (data.contactEmail is string && data.contactEmail.size() <= 160))
+        && (!('contactPhone' in data) || (data.contactPhone is string && data.contactPhone.size() <= 40))
+        && (!('whatsappNumber' in data) || (data.whatsappNumber is string && data.whatsappNumber.size() <= 40))
+        && (!('officeAddress' in data) || (data.officeAddress is string && data.officeAddress.size() <= 500))
+        && (!('faqs' in data) || (data.faqs is list && data.faqs.size() <= 40))
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidProductCategory(data) {
+      return data.keys().hasAll(['name', 'slug', 'sortOrder', 'active', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['name', 'slug', 'description', 'imageUrl', 'sortOrder', 'active', 'createdAt', 'updatedAt'])
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 100
+        && data.slug is string && data.slug.size() >= 2 && data.slug.size() <= 100 && data.slug.matches('^[a-z0-9_\\-]+$')
+        && (!('description' in data) || (data.description is string && data.description.size() <= 600))
+        && (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 500))
+        && data.sortOrder is number
+        && data.active is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidProduct(data) {
+      return data.keys().hasAll(['name', 'categoryId', 'categoryName', 'description', 'status', 'featured', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly([
+          'name', 'categoryId', 'categoryName', 'description', 'productInfo',
+          'packSizes', 'imageUrl', 'status', 'featured', 'isSample', 'createdAt', 'updatedAt'
+        ])
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 140
+        && data.categoryId is string && data.categoryId.size() >= 1 && data.categoryId.size() <= 100
+        && data.categoryName is string && data.categoryName.size() >= 2 && data.categoryName.size() <= 100
+        && data.description is string && data.description.size() >= 5 && data.description.size() <= 1200
+        && (!('productInfo' in data) || (data.productInfo is string && data.productInfo.size() <= 800))
+        && (!('packSizes' in data) || (data.packSizes is string && data.packSizes.size() <= 200))
+        && (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 500))
+        && data.status in ['published', 'draft', 'archived']
+        && data.featured is bool
+        && (!('isSample' in data) || data.isSample is bool)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidInvestmentSetting(data) {
+      return data.keys().hasAll(['opportunityType', 'title', 'summary', 'termsLabel', 'disclaimer', 'updatedAt'])
+        && data.keys().hasOnly([
+          'opportunityType', 'title', 'summary', 'initialInvestment', 'securityDeposit',
+          'initialStock', 'infrastructure', 'warehouse', 'transportation', 'otherCharges',
+          'termsLabel', 'disclaimer', 'eligibilityPoints', 'requiredDocuments', 'updatedAt'
+        ])
+        && data.opportunityType in ['dealership', 'cf_agency', 'super_stockist', 'distributorship']
+        && data.title is string && data.title.size() >= 2 && data.title.size() <= 120
+        && data.summary is string && data.summary.size() <= 1200
+        && (!('initialInvestment' in data) || (data.initialInvestment is string && data.initialInvestment.size() <= 200))
+        && (!('securityDeposit' in data) || (data.securityDeposit is string && data.securityDeposit.size() <= 200))
+        && (!('initialStock' in data) || (data.initialStock is string && data.initialStock.size() <= 200))
+        && (!('infrastructure' in data) || (data.infrastructure is string && data.infrastructure.size() <= 250))
+        && (!('warehouse' in data) || (data.warehouse is string && data.warehouse.size() <= 250))
+        && (!('transportation' in data) || (data.transportation is string && data.transportation.size() <= 250))
+        && (!('otherCharges' in data) || (data.otherCharges is string && data.otherCharges.size() <= 250))
+        && data.termsLabel in ['Estimated Indicative Range', 'Approved Commercial Terms', 'Subject to Territory Assessment']
+        && data.disclaimer is string && data.disclaimer.size() <= 800
+        && (!('eligibilityPoints' in data) || (data.eligibilityPoints is list && data.eligibilityPoints.size() <= 20))
+        && (!('requiredDocuments' in data) || (data.requiredDocuments is list && data.requiredDocuments.size() <= 20))
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidTerritory(data) {
+      return data.keys().hasAll(['state', 'stateType', 'district', 'city', 'pinCode', 'status', 'availableCategories', 'updatedAt'])
+        && data.keys().hasOnly(['state', 'stateType', 'district', 'city', 'pinCode', 'status', 'availableCategories', 'allocatedPartner', 'updatedAt'])
+        && data.state is string && data.state.size() >= 2 && data.state.size() <= 100
+        && data.stateType in ['State', 'Union Territory']
+        && data.district is string && data.district.size() >= 2 && data.district.size() <= 100
+        && data.city is string && data.city.size() >= 2 && data.city.size() <= 100
+        && data.pinCode is string && data.pinCode.matches('^[0-9]{6}$')
+        && data.status in ['open', 'closed', 'allocated']
+        && data.availableCategories is list && data.availableCategories.size() <= 4
+        && (data.availableCategories.size() == 0 || data.availableCategories[0] is string)
+        && (!('allocatedPartner' in data) || (data.allocatedPartner is string && data.allocatedPartner.size() <= 140))
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidApplication(data) {
+      return data.keys().hasAll([
+          'applicationRefId', 'category', 'applicantName', 'mobile', 'email',
+          'state', 'district', 'city', 'pinCode', 'preferredTerritory',
+          'businessDetails', 'status', 'documentCount', 'trackingKey', 'submittedAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'applicationRefId', 'category', 'applicantName', 'mobile', 'email',
+          'state', 'district', 'city', 'pinCode', 'preferredTerritory',
+          'businessDetails', 'status', 'internalRemarks', 'publicRemarks',
+          'pendingDocuments', 'documentCount', 'trackingKey', 'submittedAt', 'updatedAt'
+        ])
+        && data.applicationRefId is string && data.applicationRefId.size() >= 6 && data.applicationRefId.size() <= 40 && data.applicationRefId.matches('^[A-Z0-9\\-]+$')
+        && data.category in ['dealership', 'cf_agency', 'super_stockist', 'distributorship']
+        && data.applicantName is string && data.applicantName.size() >= 2 && data.applicantName.size() <= 140
+        && data.mobile is string && data.mobile.matches('^[0-9]{10,15}$')
+        && data.email is string && data.email.size() >= 5 && data.email.size() <= 160
+        && data.state is string && data.state.size() >= 2 && data.state.size() <= 100
+        && data.district is string && data.district.size() >= 2 && data.district.size() <= 100
+        && data.city is string && data.city.size() >= 2 && data.city.size() <= 100
+        && data.pinCode is string && data.pinCode.matches('^[0-9]{6}$')
+        && data.preferredTerritory is string && data.preferredTerritory.size() >= 2 && data.preferredTerritory.size() <= 200
+        && data.businessDetails is map
+        && data.status in [
+          'Application Submitted', 'Initial Screening', 'Under Verification',
+          'Documents Pending', 'Business Evaluation', 'Territory Availability Check',
+          'Management Review', 'Approved', 'Rejected'
+        ]
+        && (!('internalRemarks' in data) || (data.internalRemarks is string && data.internalRemarks.size() <= 2000))
+        && (!('publicRemarks' in data) || (data.publicRemarks is string && data.publicRemarks.size() <= 1000))
+        && (!('pendingDocuments' in data) || (data.pendingDocuments is list && data.pendingDocuments.size() <= 15))
+        && data.documentCount is number && data.documentCount >= 0 && data.documentCount <= 15
+        && isValidTrackingKey(data.trackingKey)
+        && data.submittedAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidApplicationDocument(data, parentAppId) {
+      return data.keys().hasAll(['applicationId', 'docType', 'fileName', 'mimeType', 'fileSize', 'storageProvider', 'verified', 'uploadedAt'])
+        && data.keys().hasOnly(['applicationId', 'docType', 'fileName', 'mimeType', 'fileSize', 'storageProvider', 'storagePath', 'dataUrl', 'verified', 'uploadedAt'])
+        && data.applicationId == parentAppId
+        && data.docType is string && data.docType.size() >= 2 && data.docType.size() <= 100
+        && data.fileName is string && data.fileName.size() >= 1 && data.fileName.size() <= 200
+        && data.mimeType in ['application/pdf', 'image/jpeg', 'image/png', 'image/webp']
+        && data.fileSize is number && data.fileSize > 0 && data.fileSize <= 5242880
+        && data.storageProvider in ['firebase_storage', 'firestore_private_vault']
+        && (!('storagePath' in data) || (data.storagePath is string && data.storagePath.size() <= 300))
+        && (!('dataUrl' in data) || (data.dataUrl is string && data.dataUrl.size() <= 800000))
+        && (
+          (data.storageProvider == 'firebase_storage' && 'storagePath' in data && data.storagePath.size() >= 10) ||
+          (data.storageProvider == 'firestore_private_vault' && 'dataUrl' in data && data.dataUrl.size() >= 20 && data.fileSize <= 600000)
+        )
+        && data.verified is bool
+        && data.uploadedAt is timestamp;
+    }
+
+    function isValidStatusHistory(data, parentAppId) {
+      return data.keys().hasAll(['applicationId', 'status', 'remark', 'changedBy', 'changedAt'])
+        && data.keys().hasOnly(['applicationId', 'status', 'remark', 'changedBy', 'changedAt'])
+        && data.applicationId == parentAppId
+        && data.status is string && data.status.size() >= 2 && data.status.size() <= 80
+        && data.remark is string && data.remark.size() <= 1000
+        && data.changedBy is string && data.changedBy.size() <= 160
+        && data.changedAt is timestamp;
+    }
+
+    function isValidTrackingRecord(data) {
+      return data.keys().hasAll(['applicationId', 'applicationRefId', 'category', 'state', 'district', 'status', 'timeline', 'submittedAt', 'updatedAt'])
+        && data.keys().hasOnly(['applicationId', 'applicationRefId', 'category', 'state', 'district', 'status', 'publicRemarks', 'pendingDocuments', 'timeline', 'submittedAt', 'updatedAt'])
+        && isValidId(data.applicationId)
+        && data.applicationRefId is string && data.applicationRefId.size() >= 6 && data.applicationRefId.size() <= 40
+        && data.category in ['dealership', 'cf_agency', 'super_stockist', 'distributorship']
+        && data.state is string && data.state.size() <= 100
+        && data.district is string && data.district.size() <= 100
+        && data.status is string && data.status.size() <= 80
+        && (!('publicRemarks' in data) || (data.publicRemarks is string && data.publicRemarks.size() <= 1000))
+        && (!('pendingDocuments' in data) || (data.pendingDocuments is list && data.pendingDocuments.size() <= 15))
+        && data.timeline is list && data.timeline.size() <= 30
+        && data.submittedAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidEnquiry(data) {
+      return data.keys().hasAll(['name', 'mobile', 'email', 'enquiryType', 'message', 'status', 'createdAt'])
+        && data.keys().hasOnly(['name', 'mobile', 'email', 'enquiryType', 'state', 'message', 'status', 'createdAt'])
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 120
+        && data.mobile is string && data.mobile.matches('^[0-9]{10,15}$')
+        && data.email is string && data.email.size() >= 5 && data.email.size() <= 160
+        && data.enquiryType in ['Business Enquiry', 'Franchise Enquiry', 'Dealership Support', 'C&F Support', 'Distributor Support', 'General Support']
+        && (!('state' in data) || (data.state is string && data.state.size() <= 100))
+        && data.message is string && data.message.size() >= 5 && data.message.size() <= 2000
+        && data.status in ['new', 'in_progress', 'resolved']
+        && data.createdAt is timestamp;
+    }
+
+    function isValidNotificationLog(data) {
+      return data.keys().hasAll(['channel', 'recipientMasked', 'eventType', 'status', 'createdAt'])
+        && data.keys().hasOnly(['channel', 'recipientMasked', 'eventType', 'applicationRefId', 'status', 'detail', 'createdAt'])
+        && data.channel in ['email', 'sms', 'whatsapp']
+        && data.recipientMasked is string && data.recipientMasked.size() <= 120
+        && data.eventType is string && data.eventType.size() <= 100
+        && (!('applicationRefId' in data) || (data.applicationRefId is string && data.applicationRefId.size() <= 40))
+        && data.status in ['sent', 'not_configured', 'failed']
+        && (!('detail' in data) || (data.detail is string && data.detail.size() <= 400))
+        && data.createdAt is timestamp;
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll(['actorEmail', 'action', 'targetType', 'targetId', 'summary', 'createdAt'])
+        && data.keys().hasOnly(['actorEmail', 'action', 'targetType', 'targetId', 'summary', 'createdAt'])
+        && data.actorEmail is string && data.actorEmail.size() <= 160
+        && data.action is string && data.action.size() <= 120
+        && data.targetType is string && data.targetType.size() <= 80
+        && data.targetId is string && data.targetId.size() <= 128
+        && data.summary is string && data.summary.size() <= 600
+        && data.createdAt is timestamp;
+    }
+
+    // 4. Collection Rules
+    match /admins/{adminUid} {
+      allow get: if isValidId(adminUid) && (isAdmin() || (isVerifiedUser() && request.auth.uid == adminUid));
+      allow list: if isAdmin();
+      allow create: if isValidId(adminUid) && isAdmin() && isValidAdminUser(incoming()) && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isValidId(adminUid) && isAdmin() && isValidAdminUser(incoming())
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if isValidId(adminUid) && isAdmin() && adminUid != request.auth.uid;
+    }
+
+    match /website_settings/{settingId} {
+      allow get: if isValidId(settingId);
+      allow list: if true;
+      allow create: if isValidId(settingId) && isAdmin() && isValidWebsiteSettings(incoming()) && incoming().updatedAt == request.time;
+      allow update: if isValidId(settingId) && isAdmin() && isValidWebsiteSettings(incoming()) && incoming().updatedAt == request.time;
+      allow delete: if isValidId(settingId) && isAdmin();
+    }
+
+    match /product_categories/{categoryId} {
+      allow get: if isValidId(categoryId);
+      allow list: if true;
+      allow create: if isValidId(categoryId) && isAdmin() && isValidProductCategory(incoming()) && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isValidId(categoryId) && isAdmin() && isValidProductCategory(incoming()) && incoming().createdAt == existing().createdAt && incoming().updatedAt == request.time;
+      allow delete: if isValidId(categoryId) && isAdmin();
+    }
+
+    match /products/{productId} {
+      allow get: if isValidId(productId) && (existing().status == 'published' || isAdmin());
+      allow list: if resource.data.status == 'published' || isAdmin();
+      allow create: if isValidId(productId) && isAdmin() && isValidProduct(incoming()) && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isValidId(productId) && isAdmin() && isValidProduct(incoming()) && incoming().createdAt == existing().createdAt && incoming().updatedAt == request.time;
+      allow delete: if isValidId(productId) && isAdmin();
+    }
+
+    match /investment_settings/{opportunityType} {
+      allow get: if isValidId(opportunityType);
+      allow list: if true;
+      allow create: if isValidId(opportunityType) && isAdmin() && isValidInvestmentSetting(incoming()) && incoming().updatedAt == request.time;
+      allow update: if isValidId(opportunityType) && isAdmin() && isValidInvestmentSetting(incoming()) && incoming().updatedAt == request.time;
+      allow delete: if isValidId(opportunityType) && isAdmin();
+    }
+
+    match /territories/{territoryId} {
+      allow get: if isValidId(territoryId);
+      allow list: if true;
+      allow create: if isValidId(territoryId) && isAdmin() && isValidTerritory(incoming()) && incoming().updatedAt == request.time;
+      allow update: if isValidId(territoryId) && isAdmin() && isValidTerritory(incoming()) && incoming().updatedAt == request.time;
+      allow delete: if isValidId(territoryId) && isAdmin();
+    }
+
+    match /applications/{applicationId} {
+      allow get: if isValidId(applicationId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(applicationId)
+        && isValidApplication(incoming())
+        && incoming().status == 'Application Submitted'
+        && !('internalRemarks' in incoming())
+        && incoming().submittedAt == request.time
+        && incoming().updatedAt == request.time
+        && existsAfter(/databases/$(database)/documents/tracking_records/$(incoming().trackingKey));
+      allow update: if isValidId(applicationId)
+        && isAdmin()
+        && isValidApplication(incoming())
+        && incoming().applicationRefId == existing().applicationRefId
+        && incoming().category == existing().category
+        && incoming().trackingKey == existing().trackingKey
+        && incoming().submittedAt == existing().submittedAt
+        && incoming().updatedAt == request.time;
+      allow delete: if isValidId(applicationId) && isAdmin();
+
+      match /documents/{docId} {
+        allow get: if isValidId(applicationId) && isValidId(docId) && isAdmin();
+        allow list: if isAdmin();
+        allow create: if isValidId(applicationId)
+          && isValidId(docId)
+          && isValidApplicationDocument(incoming(), applicationId)
+          && incoming().verified == false
+          && incoming().uploadedAt == request.time
+          && (
+            isAdmin() ||
+            getAfter(/databases/$(database)/documents/applications/$(applicationId)).data.submittedAt == request.time
+          );
+        allow update: if isValidId(applicationId)
+          && isValidId(docId)
+          && isAdmin()
+          && isValidApplicationDocument(incoming(), applicationId)
+          && incoming().uploadedAt == existing().uploadedAt;
+        allow delete: if isValidId(applicationId) && isValidId(docId) && isAdmin();
+      }
+
+      match /history/{historyId} {
+        allow get: if isValidId(applicationId) && isValidId(historyId) && isAdmin();
+        allow list: if isAdmin();
+        allow create: if isValidId(applicationId)
+          && isValidId(historyId)
+          && isValidStatusHistory(incoming(), applicationId)
+          && incoming().changedAt == request.time
+          && (
+            isAdmin() ||
+            (incoming().status == 'Application Submitted' && getAfter(/databases/$(database)/documents/applications/$(applicationId)).data.submittedAt == request.time)
+          );
+        allow update, delete: if false;
+      }
+    }
+
+    match /tracking_records/{trackingKey} {
+      allow get: if isValidTrackingKey(trackingKey) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidTrackingKey(trackingKey)
+        && isValidTrackingRecord(incoming())
+        && incoming().status == 'Application Submitted'
+        && incoming().submittedAt == request.time
+        && incoming().updatedAt == request.time
+        && getAfter(/databases/$(database)/documents/applications/$(incoming().applicationId)).data.trackingKey == trackingKey
+        && getAfter(/databases/$(database)/documents/applications/$(incoming().applicationId)).data.submittedAt == request.time;
+      allow update: if isValidTrackingKey(trackingKey)
+        && isAdmin()
+        && isValidTrackingRecord(incoming())
+        && incoming().applicationId == existing().applicationId
+        && incoming().applicationRefId == existing().applicationRefId
+        && incoming().submittedAt == existing().submittedAt
+        && incoming().updatedAt == request.time;
+      allow delete: if isValidTrackingKey(trackingKey) && isAdmin();
+    }
+
+    match /enquiries/{enquiryId} {
+      allow get: if isValidId(enquiryId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(enquiryId)
+        && isValidEnquiry(incoming())
+        && incoming().status == 'new'
+        && incoming().createdAt == request.time;
+      allow update: if isValidId(enquiryId)
+        && isAdmin()
+        && isValidEnquiry(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status']);
+      allow delete: if isValidId(enquiryId) && isAdmin();
+    }
+
+    match /notifications/{notificationId} {
+      allow get: if isValidId(notificationId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(notificationId)
+        && isValidNotificationLog(incoming())
+        && incoming().createdAt == request.time
+        && (
+          isAdmin() ||
+          (
+            incoming().eventType == 'Application Submitted' &&
+            'applicationRefId' in incoming() &&
+            incoming().applicationRefId.matches('^IND-(DLR|CFA|SSK|DST)-[0-9]{4}-[0-9]{6}$')
+          )
+        );
+      allow update, delete: if false;
+    }
+
+    match /audit_logs/{logId} {
+      allow get: if isValidId(logId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(logId)
+        && isAdmin()
+        && isValidAuditLog(incoming())
+        && incoming().createdAt == request.time;
+      allow update, delete: if false;
+    }
+  }
+}

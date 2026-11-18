@@ -1,0 +1,6 @@
+{
+  "name": "INDEPENDENCE FMCG – Pan India Corporate Portal",
+  "description": "Official Pan-India corporate portal for Independence FMCG food and beverage services. Explore Dealership, C&F Agency, Super Stockist, and Distributorship opportunities across 28 States and 8 Union Territories.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
